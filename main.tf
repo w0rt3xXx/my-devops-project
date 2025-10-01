@@ -1,4 +1,3 @@
-# Указываем, с каким провайдером мы будем работать (digitalocean)
 terraform {
   required_providers {
     digitalocean = {
@@ -8,22 +7,30 @@ terraform {
   }
 }
 
-# Переменная для нашего токена. Terraform будет искать его в системных переменных.
 variable "do_token" {}
 
-# Настраиваем подключение к DigitalOcean
 provider "digitalocean" {
   token = var.do_token
 }
 
-# Описываем наш будущий сервер (здесь он называется "droplet")
-resource "digitalocean_droplet" "web" {
-  image    = "docker-20-04" # Готовый образ Ubuntu с предустановленным Docker
-  name     = "my-devops-server"
-  region   = "fra1" # Регион Франкфурт, можешь выбрать другой (например, ams3, nyc3)
-  size     = "s-1vcpu-1gb" # Самый простой и дешевый тип сервера
+# Terraform теперь сам управляет SSH-ключом
+resource "digitalocean_ssh_key" "default" {
+  name       = "DevOps Project Key"
+  # Он сам прочитает твой новый публичный ключ из файла!
+  public_key = file("~/.ssh/id_rsa.pub")
+}
 
-  # SSH-ключ для доступа к серверу. Мы создадим его на следующем шаге.
-  # Пока эту строку можно закомментировать, добавив '#' в начале.
-  # ssh_keys = [digitalocean_ssh_key.default.id]
+# Сервер теперь использует ключ, созданный выше
+resource "digitalocean_droplet" "web" {
+  image    = "docker-20-04"
+  name     = "my-devops-server"
+  region   = "fra1"
+  size     = "s-1vcpu-1gb"
+  # Указываем ID ключа, которым будет управлять Terraform
+  ssh_keys = [digitalocean_ssh_key.default.id]
+}
+
+# Чтобы легко узнать IP-адрес нового сервера
+output "droplet_ip_address" {
+  value = digitalocean_droplet.web.ipv4_address
 }
