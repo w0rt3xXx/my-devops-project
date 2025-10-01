@@ -1,32 +1,30 @@
-# Имя нашего workflow, которое будет отображаться на GitHub
 name: CI Pipeline
 
-# Триггер: Указываем, когда запускать этот workflow.
-# В нашем случае - при каждом 'push' в ветку 'main'.
 on:
   push:
     branches: [ "main" ]
 
-# Задания: Список работ, которые нужно выполнить.
-# У нас будет одна работа под названием 'build'.
 jobs:
-  build:
-    # Указываем, на какой операционной системе будет работать наш CI.
-    # 'ubuntu-latest' — это стандарт для CI/CD.
+  build_and_push:
     runs-on: ubuntu-latest
-
-    # Шаги: Последовательность действий, которые нужно выполнить в рамках работы 'build'.
     steps:
-      # Шаг 1: Клонируем наш репозиторий на виртуальную машину GitHub.
-      # 'uses' означает, что мы используем готовое действие (action) от сообщества.
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Шаг 2: Собираем Docker-образ.
-      # Мы даем ему такое же имя, как и локально.
-      - name: Build Docker image
-        run: docker build -t my-devops-app .
+      # ШАГ 1: Вход в Docker Hub
+      # Мы используем готовый action для логина
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Дополнительный шаг (для проверки): Показываем список созданных образов.
-      - name: List Docker images
-        run: docker images
+      # ШАГ 2: Сборка и отправка Docker-образа
+      # Этот action умеет и собирать (build), и отправлять (push) образ
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          # Тег (имя) образа будет выглядеть как "ваш_логин/имя_репозитория:latest"
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/my-devops-project:latest
